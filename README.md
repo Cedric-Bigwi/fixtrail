@@ -1,59 +1,73 @@
-# FixTrail - Campus Incident Reporting (Flutter + Firebase)
+# FixTrail
 
-## 1. Create the Flutter project, then drop these files in
-```bash
-flutter create --org com.yourname --platforms=android,ios fixtrail
-cd fixtrail
-# delete the generated lib/ and test/, then copy from this zip:
-#   lib/  test/  pubspec.yaml  firebase/  README.md
-flutter pub get
+A campus incident reporting app for ALU, built with Flutter and Firebase. Students report issues (broken facilities, water or electricity outages, damaged furniture, sanitation and safety problems) and follow them from **Submitted** to **In progress** to **Resolved**. Authorised staff review reports and update their status.
+
+Built for Mobile Application Development, Individual Assignment 2.
+Author: Cedric Bigwi Hindura
+
+## Features
+
+- Register and sign in with an ALU email (`@alustudent.com` or `@alueducation.com`), with email verification
+- Submit a report with category, title, description, campus location and an optional photo
+- Browse all reports or only your own, with search and status and category filters
+- Report details with a status timeline, staff notes and a "Me too" button
+- Edit your report until it is resolved, or delete it
+- Staff desk: update a report's status and add a note (staff accounts only)
+- Hide your name from other students (staff can still see it)
+- Light and dark mode, remembered on the device
+
+## Tech stack
+
+| Area | Choice |
+|---|---|
+| UI | Flutter (Material 3) |
+| State management | Provider (`ChangeNotifier`, `ProxyProvider`) |
+| Authentication | Firebase Authentication (email and password) |
+| Database | Cloud Firestore (`users`, `incidents`) |
+| Photo storage | Supabase Storage (approved alternative to Firebase Storage) |
+| Local settings | SharedPreferences (theme) |
+
+## Project structure
+
 ```
-Android: in `android/app/build.gradle(.kts)` set `minSdk = 23`.
-iOS: add `NSCameraUsageDescription` and `NSPhotoLibraryUsageDescription` to `ios/Runner/Info.plist`.
-
-## 2. Firebase console
-1. Create a project.
-2. Authentication > enable **Email/Password**.
-3. Firestore Database > Create (production mode) > Rules > paste `firebase/firestore.rules` > Publish.
-4. Photos: pick ONE
-   - **Supabase (free, default)** - follow "Supabase photo storage" below. Skip Firebase Storage.
-   - **Firebase Storage** (needs the Blaze plan) - Storage > Get started > Rules > paste `firebase/storage.rules`, then set `AppConstants.useSupabaseStorage = false`.
-
-## 3. Generate `lib/firebase_options.dart` (REQUIRED - main.dart imports it)
-```bash
-dart pub global activate flutterfire_cli
-firebase login
-flutterfire configure      # choose your project + android/ios
+lib/
+  core/        theme, constants, validators, campus locations
+  models/      Incident, AppUser
+  providers/   AuthProvider, IncidentProvider, ThemeProvider
+  services/    AuthService, IncidentService, PhotoStorageService, demo data
+  screens/     auth, home, reports, staff, profile
+  widgets/     reusable cards, filters, badges, photo viewer
+firebase/      Firestore and Storage security rules
+supabase/      storage policies (SQL)
+test/          unit tests
 ```
-Fallback if the CLI fails: copy `firebase/firebase_options.template.dart` to
-`lib/firebase_options.dart` and fill in your values.
 
-## Supabase photo storage
-1. Supabase dashboard > Storage > **New bucket** > name `incident-photos`, **Public bucket ON**, file size limit 5 MB, allowed MIME types `image/jpeg, image/png, image/webp`.
-2. SQL Editor > paste `supabase/storage_policies.sql` > Run.
-3. Settings > General (or the **Connect** button) > copy the **Project URL**. Settings > API Keys > copy the full **Publishable key** (`sb_publishable_...`).
-4. Put both in `lib/core/constants.dart` (`supabaseUrl`, `supabasePublishableKey`). Never use the secret key in the app.
+## Getting started
 
-## 4. Run
-`flutter run`
+1. Install [Flutter](https://docs.flutter.dev/get-started/install), then run `flutter pub get`.
+2. **Firebase:** create a project, enable Email/Password sign-in, create a Firestore database, and publish `firebase/firestore.rules`.
+3. Run `flutterfire configure` to generate `lib/firebase_options.dart`.
+4. **Photos (Supabase):** create a public bucket named `incident-photos`, run `supabase/storage_policies.sql` in the SQL editor, then put your project URL and **publishable** key in `lib/core/constants.dart`. Never put the secret key in the app.
+5. Run the app: `flutter run` (phone, emulator, or Chrome with DevTools device mode).
 
-## Email verification switch
-`AppConstants.requireEmailVerification` (lib/core/constants.dart), default **false**:
-- false -> only the ALU-domain check (@alustudent.com / @alueducation.com); no inbox needed.
-- true  -> users must click the emailed link first.
-If you change it, also set `requireVerified()` to the same value in BOTH rules files and re-publish them.
-(The grading rubric mentions email verification: turn it ON for the final demo with your own real ALU email.)
+## Staff account and demo data
 
-## Staff account + demo data
-1. Register an `@alueducation.com` (or any allowed-domain) account.
-2. Firestore > `users` > that user's doc > change `role` to `staff`. Sign out and in.
-3. Profile tab > **Developer tools** > **Load demo data** (12 sample reports in all statuses). **Remove** deletes only the demo reports.
+Staff cannot be created from inside the app. Register an account, then in the Firebase console open `users/<uid>` and change `role` from `student` to `staff`. Staff users get a **Staff** tab and a **Developer tools** card in Profile to load or remove demo reports.
 
-## Dark / light theme
-Profile > Dark mode. Saved with shared_preferences; first launch follows the phone setting.
+## Settings worth knowing
 
-## Testing with a non-ALU email
-Add its domain to `AppConstants.allowedDomains` and to the regex in `firestore.rules`. Revert afterwards.
+- `AppConstants.requireEmailVerification` turns the verification step on or off. If you change it, change `requireVerified()` in `firebase/firestore.rules` too, and republish.
+- `AppConstants.useSupabaseStorage` switches photo storage between Supabase and Firebase Storage.
 
 ## Tests
-`flutter test`
+
+```
+flutter test
+```
+
+Covers the validators and the search and filter logic.
+
+## Known limitations
+
+- The Supabase photo bucket accepts uploads from anyone holding the app's public key (limited by a 5 MB cap, image-only files and random file names).
+- Staff promotion is manual, and there are no push notifications yet.
