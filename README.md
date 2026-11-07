@@ -37,7 +37,7 @@ lib/
   services/    AuthService, IncidentService, PhotoStorageService, demo data
   screens/     auth, home, reports, staff, profile
   widgets/     reusable cards, filters, badges, photo viewer
-firebase/      Firestore and Storage security rules
+firebase/      Firestore security rules
 supabase/      storage policies (SQL)
 test/          unit tests
 ```
