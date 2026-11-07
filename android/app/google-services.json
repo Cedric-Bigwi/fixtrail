@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "760967922091",
+    "project_id": "fixtrail",
+    "storage_bucket": "fixtrail.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:760967922091:android:7da6d4d4b963d2953112ee",
+        "android_client_info": {
+          "package_name": "com.example.fixtrail"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAuc-nbRZuvbzStCvNiBNz_IdfvK-Qg77s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

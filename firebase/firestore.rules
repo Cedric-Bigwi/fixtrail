@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Keep in sync with AppConstants.requireEmailVerification in the app.
+    function requireVerified() {
+      return false;   // set to true to also require the emailed verification link
+    }
+
+    // Must be signed in, on an ALU domain (and verified, if required).
+    function signedIn() {
+      return request.auth != null
+        && (!requireVerified() || request.auth.token.email_verified == true)
+        && request.auth.token.email.matches('.*@(alustudent|alueducation)[.]com');
+    }
+
+    function isStaff() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'staff';
+    }
+
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    match /users/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isStaff());
+      // Self-registration can ONLY create a student profile.
+      allow create: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.role == 'student';
+      // Users can edit their profile but never their own role.
+      allow update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.role == resource.data.role;
+      allow delete: if false;
+    }
+
+    match /incidents/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && (
+        // Staff may import/seed demo reports on behalf of others
+        isStaff()
+        // Students: only their own report, always starting as "submitted"
+        || (request.resource.data.reporterId == request.auth.uid
+          && request.resource.data.status == 'submitted'
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 3
+          && request.resource.data.title.size() <= 120)
+      );
+
+      allow update: if signedIn() && (
+        // Staff: change status + timeline only
+        (isStaff()
+          && changed().hasOnly(['status', 'timeline', 'updatedAt'])
+          && request.resource.data.status in ['submitted', 'inProgress', 'resolved'])
+        // Owner: edit own report until it is resolved
+        || (resource.data.reporterId == request.auth.uid
+          && resource.data.status != 'resolved'
+          && changed().hasOnly(['title', 'description', 'category', 'location',
+                                'anonymous', 'photoUrl', 'updatedAt']))
+        // Owner: keep own name current after a profile rename
+        || (resource.data.reporterId == request.auth.uid
+          && changed().hasOnly(['reporterName']))
+        // Anyone: toggle "me too"
+        || changed().hasOnly(['affectedBy'])
+      );
+
+      allow delete: if signedIn() && (
+        isStaff()
+        // Owner: may delete their own report
+        || resource.data.reporterId == request.auth.uid
+      );
+    }
+  }
+}
